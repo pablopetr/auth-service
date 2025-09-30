@@ -32,6 +32,7 @@ class AuthController extends Controller
         $data = $request->validate([
             'email' => ['required', 'email:rfc,dns'],
             'password' => ['required', 'string'],
+            'aud' => ['sometimes', 'array'],
         ]);
 
         $user = User::where('email', $data['email'])->first();
@@ -40,7 +41,9 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        $access = $jwt->generateAccessToken($user);
+        $aud = $data['aud'] ?? null;
+
+        $access = $jwt->generateAccessToken($user, $aud);
         $refresh = $this->issueRefreshToken($user, $request);
 
         return response()->json([
