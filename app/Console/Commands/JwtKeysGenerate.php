@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 class JwtKeysGenerate extends Command
 {
     protected $signature = 'jwt:keys:generate {--activate : Mark this key as active signer} {--deprecate-days=0}';
+
     protected $description = 'Generate RSA key pair, store encrypted private key and public key, optionally activate.';
 
     public function handle(): int
@@ -43,7 +44,10 @@ class JwtKeysGenerate extends Command
         ]);
 
         $this->info("kid: {$kid}");
-        if ($active) $this->info('This key is ACTIVE for signing.');
+        if ($active) {
+            $this->info('This key is ACTIVE for signing.');
+        }
+
         return self::SUCCESS;
     }
 }

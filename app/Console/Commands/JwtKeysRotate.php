@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Crypt;
 class JwtKeysRotate extends Command
 {
     protected $signature = 'jwt:keys:rotate {--grace-days=1 : Keep old key in JWKS for this many days}';
+
     protected $description = 'Generate new active key; keep old keys published until grace expires.';
 
     public function handle(): int
@@ -40,6 +41,7 @@ class JwtKeysRotate extends Command
         ]);
 
         $this->info("New ACTIVE key kid: {$kid}");
+
         return self::SUCCESS;
     }
 }

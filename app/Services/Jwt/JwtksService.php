@@ -31,15 +31,15 @@ class JwtksService
         $det = openssl_pkey_get_details($res);
         $n = $det['rsa']['n'] ?? null;
         $e = $det['rsa']['e'] ?? null;
-        $b64url = fn($bin) => rtrim(strtr(base64_encode($bin), '+/', '-_'), '=');
+        $b64url = fn ($bin) => rtrim(strtr(base64_encode($bin), '+/', '-_'), '=');
 
         return [
             'kid' => $kid,
             'kty' => 'RSA',
             'alg' => 'RS256',
             'use' => 'sig',
-            'n'   => $b64url($n),
-            'e'   => $b64url($e),
+            'n' => $b64url($n),
+            'e' => $b64url($e),
         ];
     }
 }

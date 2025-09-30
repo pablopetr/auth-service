@@ -14,8 +14,8 @@ class AuthController extends Controller
     public function signup(Request $request)
     {
         $data = $request->validate([
-           'email' => ['required', 'email:rfc,dns', 'unique:users,email'],
-          'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'email' => ['required', 'email:rfc,dns', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $user = User::create([
@@ -36,7 +36,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user || !Hash::check($data['password'], $user->password)) {
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
@@ -64,11 +64,11 @@ class AuthController extends Controller
             ->where('expires_at', '>', $now)
             ->latest('id')
             ->get()
-            ->first(function ($row) use($plain) {
+            ->first(function ($row) use ($plain) {
                 return Hash::check($plain, $row->token_hash);
             });
 
-        if(!$candidate) {
+        if (! $candidate) {
             return response()->json(['message' => 'Invalid token'], 401);
         }
 
@@ -76,7 +76,7 @@ class AuthController extends Controller
 
         $idempotencyWindow = 10;
 
-        if($candidate->last_used_at && $candidate->last_used_at->gt($now->copy()->subSeconds($idempotencyWindow))) {
+        if ($candidate->last_used_at && $candidate->last_used_at->gt($now->copy()->subSeconds($idempotencyWindow))) {
             $access = app(JwtService::class)->generateAccessToken($user);
 
             return response()->json([
@@ -103,7 +103,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $data = $request->validate([
-           'refresh_token' => ['required', 'string'],
+            'refresh_token' => ['required', 'string'],
         ]);
 
         $plain = $data['refresh_token'];
@@ -113,11 +113,11 @@ class AuthController extends Controller
             ->where('expires_at', '>', $now)
             ->latest('id')
             ->get()
-            ->first(function ($row) use($plain) {
+            ->first(function ($row) use ($plain) {
                 return Hash::check($plain, $row->token_hash);
             });
 
-        if($candidate) {
+        if ($candidate) {
             $candidate->update(['revoked_at' => $now, 'last_used_at' => $now]);
         }
 
@@ -128,7 +128,7 @@ class AuthController extends Controller
     {
         $ttlDays = (int) config('jwt.refresh_ttl_days', 14);
 
-        $plain = Str::random(64) . Str::random(64);
+        $plain = Str::random(64).Str::random(64);
         $hash = Hash::make($plain);
 
         RefreshToken::create([

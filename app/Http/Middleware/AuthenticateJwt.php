@@ -10,16 +10,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AuthenticateJwt
 {
-    public function __construct(private JwtService $jwt)
-    {
-
-    }
+    public function __construct(private JwtService $jwt) {}
 
     public function handle(Request $request, Closure $next, ?string $requiredAud = null): Response
     {
         $hdr = $request->bearerToken();
 
-        if(!$hdr) {
+        if (! $hdr) {
             return response()->json(['message' => 'Missing bearer token'], 401);
         }
 
@@ -34,7 +31,9 @@ class AuthenticateJwt
         $ver = (int) ($claims['ver'] ?? 0);
 
         $user = User::find($uid);
-        if (!$user) return response()->json(['message' => 'User not found'], 401);
+        if (! $user) {
+            return response()->json(['message' => 'User not found'], 401);
+        }
         if ($user->token_version !== $ver) {
             return response()->json(['message' => 'Token version mismatch'], 401);
         }

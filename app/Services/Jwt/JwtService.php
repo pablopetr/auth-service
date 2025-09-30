@@ -11,7 +11,7 @@ use RuntimeException;
 class JwtService
 {
     /** Generates a compact JWS RS256 with a selected active kid. */
-    public function generateAccessToken(User $user, array $aud = null, array $scope = []): array
+    public function generateAccessToken(User $user, ?array $aud = null, array $scope = []): array
     {
         $kid = $this->getActiveKid();
         [$privPem, $pubPem] = $this->getKeyPairByKid($kid);
@@ -45,6 +45,7 @@ class JwtService
     {
         $key = JwtKey::where('kid', $kid)->firstOrFail();
         $priv = Crypt::decryptString($key->private_pem_encrypted);
+
         return [$priv, $key->public_pem];
     }
 
@@ -53,9 +54,10 @@ class JwtService
     {
         return Cache::remember('jwt_active_kid', 60, function () {
             $key = JwtKey::where('active', true)->latest('id')->first();
-            if (!$key) {
+            if (! $key) {
                 throw new RuntimeException('No active JWT key. Run: php artisan jwt:keys:generate');
             }
+
             return $key->kid;
         });
     }
@@ -66,15 +68,19 @@ class JwtService
         [$header, $payload, $sig, $rawHeader, $rawPayload] = $this->splitJwtFull($jwt);
 
         $kid = $header['kid'] ?? null;
-        if (!$kid) throw new \RuntimeException('Missing kid');
+        if (! $kid) {
+            throw new \RuntimeException('Missing kid');
+        }
 
         $pubPem = $this->getPublicPemByKid($kid);
 
         // ✅ use os segmentos originais do token
-        $signed = $rawHeader . '.' . $rawPayload;
+        $signed = $rawHeader.'.'.$rawPayload;
 
         $ok = openssl_verify($signed, $this->b64d($sig), $pubPem, OPENSSL_ALGO_SHA256);
-        if ($ok !== 1) throw new \RuntimeException('Invalid signature');
+        if ($ok !== 1) {
+            throw new \RuntimeException('Invalid signature');
+        }
 
         // Validate claims
         $skew = (int) config('jwt.clock_skew', 60);
@@ -86,12 +92,24 @@ class JwtService
         $nbf = $payload['nbf'] ?? null;
         $iat = $payload['iat'] ?? null;
 
-        if (!$iss || $iss !== config('jwt.issuer')) throw new \RuntimeException('Bad iss');
-        if (!$aud) throw new \RuntimeException('Missing aud');
-        if ($requiredAud && !in_array($requiredAud, (array)$aud, true)) throw new \RuntimeException('Bad aud');
-        if (!$exp || ($now - $skew) >= $exp) throw new \RuntimeException('Expired');
-        if ($nbf && ($now + $skew) < $nbf) throw new \RuntimeException('Not yet valid');
-        if ($iat && ($iat - $skew) > $now) throw new \RuntimeException('Bad iat');
+        if (! $iss || $iss !== config('jwt.issuer')) {
+            throw new \RuntimeException('Bad iss');
+        }
+        if (! $aud) {
+            throw new \RuntimeException('Missing aud');
+        }
+        if ($requiredAud && ! in_array($requiredAud, (array) $aud, true)) {
+            throw new \RuntimeException('Bad aud');
+        }
+        if (! $exp || ($now - $skew) >= $exp) {
+            throw new \RuntimeException('Expired');
+        }
+        if ($nbf && ($now + $skew) < $nbf) {
+            throw new \RuntimeException('Not yet valid');
+        }
+        if ($iat && ($iat - $skew) > $now) {
+            throw new \RuntimeException('Bad iat');
+        }
 
         return ['ok' => true, 'claims' => $payload, 'kid' => $kid];
     }
@@ -101,6 +119,7 @@ class JwtService
     {
         return Cache::remember("jwt_pub_{$kid}", 15 * 60, function () use ($kid) {
             $key = JwtKey::where('kid', $kid)->firstOrFail();
+
             return $key->public_pem;
         });
     }
@@ -115,22 +134,29 @@ class JwtService
         ];
         $signingInput = implode('.', $segments);
         $pkey = openssl_pkey_get_private($privatePem);
-        if (!$pkey) throw new RuntimeException('Invalid private key');
+        if (! $pkey) {
+            throw new RuntimeException('Invalid private key');
+        }
         $ok = openssl_sign($signingInput, $signature, $pkey, OPENSSL_ALGO_SHA256);
-        if (!$ok) throw new RuntimeException('Sign failed');
+        if (! $ok) {
+            throw new RuntimeException('Sign failed');
+        }
+
         return $signingInput.'.'.$this->b64e($signature);
     }
 
     private function splitJwtFull(string $jwt): array
     {
         $parts = explode('.', $jwt);
-        if (count($parts) !== 3) throw new \RuntimeException('Malformed token');
+        if (count($parts) !== 3) {
+            throw new \RuntimeException('Malformed token');
+        }
 
-        $rawHeader  = $parts[0];
+        $rawHeader = $parts[0];
         $rawPayload = $parts[1];
-        $sig        = $parts[2];
+        $sig = $parts[2];
 
-        $header  = json_decode($this->b64d($rawHeader), true) ?: [];
+        $header = json_decode($this->b64d($rawHeader), true) ?: [];
         $payload = json_decode($this->b64d($rawPayload), true) ?: [];
 
         return [$header, $payload, $sig, $rawHeader, $rawPayload];
@@ -140,6 +166,7 @@ class JwtService
     {
         $h64 = is_array($h) ? $this->b64e(json_encode($h)) : $h;
         $p64 = is_array($p) ? $this->b64e(json_encode($p)) : $p;
+
         return $h64.'.'.$p64;
     }
 
@@ -151,7 +178,10 @@ class JwtService
     private function b64d(string $b64): string
     {
         $p = strlen($b64) % 4;
-        if ($p) $b64 .= str_repeat('=', 4 - $p);
+        if ($p) {
+            $b64 .= str_repeat('=', 4 - $p);
+        }
+
         return base64_decode(strtr($b64, '-_', '+/'));
     }
 }
