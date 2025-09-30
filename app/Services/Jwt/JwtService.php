@@ -63,17 +63,18 @@ class JwtService
     /** Validates signature+claims; returns ['ok'=>true, 'claims'=>[]] or throws RuntimeException */
     public function validate(string $jwt, ?string $requiredAud = null): array
     {
-        [$header, $payload, $sig] = $this->splitJwt($jwt);
+        [$header, $payload, $sig, $rawHeader, $rawPayload] = $this->splitJwtFull($jwt);
 
         $kid = $header['kid'] ?? null;
-        if (!$kid) throw new RuntimeException('Missing kid');
+        if (!$kid) throw new \RuntimeException('Missing kid');
 
         $pubPem = $this->getPublicPemByKid($kid);
 
-        // Verify signature (RS256)
-        $signed = $this->b64($header, $payload);
+        // ✅ use os segmentos originais do token
+        $signed = $rawHeader . '.' . $rawPayload;
+
         $ok = openssl_verify($signed, $this->b64d($sig), $pubPem, OPENSSL_ALGO_SHA256);
-        if ($ok !== 1) throw new RuntimeException('Invalid signature');
+        if ($ok !== 1) throw new \RuntimeException('Invalid signature');
 
         // Validate claims
         $skew = (int) config('jwt.clock_skew', 60);
@@ -85,12 +86,12 @@ class JwtService
         $nbf = $payload['nbf'] ?? null;
         $iat = $payload['iat'] ?? null;
 
-        if (!$iss || $iss !== config('jwt.issuer')) throw new RuntimeException('Bad iss');
-        if (!$aud) throw new RuntimeException('Missing aud');
-        if ($requiredAud && !in_array($requiredAud, (array)$aud, true)) throw new RuntimeException('Bad aud');
-        if (!$exp || ($now - $skew) >= $exp) throw new RuntimeException('Expired');
-        if ($nbf && ($now + $skew) < $nbf) throw new RuntimeException('Not yet valid');
-        if ($iat && ($iat - $skew) > $now) throw new RuntimeException('Bad iat');
+        if (!$iss || $iss !== config('jwt.issuer')) throw new \RuntimeException('Bad iss');
+        if (!$aud) throw new \RuntimeException('Missing aud');
+        if ($requiredAud && !in_array($requiredAud, (array)$aud, true)) throw new \RuntimeException('Bad aud');
+        if (!$exp || ($now - $skew) >= $exp) throw new \RuntimeException('Expired');
+        if ($nbf && ($now + $skew) < $nbf) throw new \RuntimeException('Not yet valid');
+        if ($iat && ($iat - $skew) > $now) throw new \RuntimeException('Bad iat');
 
         return ['ok' => true, 'claims' => $payload, 'kid' => $kid];
     }
@@ -120,13 +121,19 @@ class JwtService
         return $signingInput.'.'.$this->b64e($signature);
     }
 
-    private function splitJwt(string $jwt): array
+    private function splitJwtFull(string $jwt): array
     {
         $parts = explode('.', $jwt);
-        if (count($parts) !== 3) throw new RuntimeException('Malformed token');
-        $header = json_decode($this->b64d($parts[0]), true) ?: [];
-        $payload = json_decode($this->b64d($parts[1]), true) ?: [];
-        return [$header, $payload, $parts[2]];
+        if (count($parts) !== 3) throw new \RuntimeException('Malformed token');
+
+        $rawHeader  = $parts[0];
+        $rawPayload = $parts[1];
+        $sig        = $parts[2];
+
+        $header  = json_decode($this->b64d($rawHeader), true) ?: [];
+        $payload = json_decode($this->b64d($rawPayload), true) ?: [];
+
+        return [$header, $payload, $sig, $rawHeader, $rawPayload];
     }
 
     private function b64(array|string $h, array|string $p): string
