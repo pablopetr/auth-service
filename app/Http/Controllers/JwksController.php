@@ -7,10 +7,8 @@ use Illuminate\Http\JsonResponse;
 
 class JwksController extends Controller
 {
-    public function show(): JsonResponse
+    public function show(JwtksService $jwtksService): JsonResponse
     {
-        $jwtService = new JwtksService();
-
-        return response()->json($jwtService->jwks());
+        return response()->json($jwtksService->jwks());
     }
 }
