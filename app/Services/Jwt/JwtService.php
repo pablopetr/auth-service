@@ -25,6 +25,9 @@ class JwtService
             'sub' => (string) $user->id,
             'ver' => (int) $user->token_version,
             'scope' => array_values($scope),
+
+            'membership' => $user->isPremium() ? 'premium' : 'free',
+
             'iat' => $now,
             'nbf' => $now - 0,
             'exp' => $now + $ttl,
@@ -36,7 +39,7 @@ class JwtService
             'token' => $jwt,
             'kid' => $kid,
             'expires_in' => $ttl,
-            'public_pem' => $pubPem, // pode ser útil internamente (não retornar em API)
+            'public_pem' => $pubPem,
         ];
     }
 
@@ -74,7 +77,6 @@ class JwtService
 
         $pubPem = $this->getPublicPemByKid($kid);
 
-        // ✅ use os segmentos originais do token
         $signed = $rawHeader.'.'.$rawPayload;
 
         $ok = openssl_verify($signed, $this->b64d($sig), $pubPem, OPENSSL_ALGO_SHA256);
@@ -82,7 +84,6 @@ class JwtService
             throw new \RuntimeException('Invalid signature');
         }
 
-        // Validate claims
         $skew = (int) config('jwt.clock_skew', 60);
         $now = time();
 
@@ -124,7 +125,6 @@ class JwtService
         });
     }
 
-    // ===== Helpers =====
     private function signJwt(array $payload, string $privatePem, string $kid): string
     {
         $header = ['alg' => 'RS256', 'typ' => 'JWT', 'kid' => $kid];
