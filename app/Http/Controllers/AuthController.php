@@ -42,8 +42,13 @@ class AuthController extends Controller
         }
 
         $aud = $data['aud'] ?? null;
+        $baseScopes = $user->is_admin ? ['admin'] : ['user'];
 
-        $access = $jwt->generateAccessToken($user, $aud);
+        $access = $jwt->generateAccessToken(
+            user: $user,
+            aud: $aud,
+            scope: $baseScopes,
+        );
         $refresh = $this->issueRefreshToken($user, $request);
 
         return response()->json([

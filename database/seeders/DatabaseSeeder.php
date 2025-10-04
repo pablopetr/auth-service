@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enum\UserRole;
 use App\Models\Membership;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -19,6 +20,11 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'basic@user.com'],
             ['name' => 'Basic User', 'password' => bcrypt('password'), 'token_version' => 1],
+        );
+
+        User::firstOrCreate(
+            ['email' => 'admin@user.com'],
+            ['name' => 'Admin User', 'password' => bcrypt('password'), 'token_version' => 1, 'role' => UserRole::Admin->value],
         );
 
         Membership::factory()->create([

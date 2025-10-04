@@ -31,6 +31,7 @@ class AuthenticateJwt
         $ver = (int) ($claims['ver'] ?? 0);
 
         $user = User::find($uid);
+
         if (! $user) {
             return response()->json(['message' => 'User not found'], 401);
         }
@@ -38,8 +39,8 @@ class AuthenticateJwt
             return response()->json(['message' => 'Token version mismatch'], 401);
         }
 
-        $request->attributes->set('auth_user', $user);
-        $request->attributes->set('auth_claims', $claims);
+        $request->attributes->set('jwt_user', $user);
+        $request->attributes->set('jwt_claims', $claims);
 
         return $next($request);
     }
